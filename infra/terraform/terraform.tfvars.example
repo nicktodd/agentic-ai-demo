@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (git-ignored) and edit.
+region        = "eu-west-2"
+name          = "portfolio-valuation"
+owner         = "your.name@example.com"
+image_tag     = "latest"
+desired_count = 1
+# cpu    = 512
+# memory = 1024

@@ -1,0 +1,17 @@
+# Keep the Docker build context small and avoid leaking secrets into the image.
+target/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+jenkins/
+infra/
+scripts/
+docs/
+*.md
+.env
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
