@@ -1,0 +1,40 @@
+# Run a throw-away Jenkins controller locally for the demo.
+#
+#   cp .env.example .env            # set admin user/password
+#   docker compose up -d --build    # first build takes a few minutes (plugins + AWS CLI)
+#   open http://localhost:9090
+#
+# The app itself uses port 8080, so Jenkins is published on host port 9090.
+services:
+  jenkins:
+    build: .
+    container_name: demo-jenkins
+    restart: unless-stopped
+    ports:
+      - "9090:8080"     # Jenkins web UI  -> http://localhost:9090
+      - "50000:50000"   # inbound agent port (unused in this demo, kept for completeness)
+    environment:
+      # Skip the "unlock Jenkins" wizard; Configuration-as-Code sets up the admin user instead.
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc/jenkins.yaml
+      # Read from ./.env (see .env.example) and consumed by casc/jenkins.yaml.
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?set JENKINS_ADMIN_PASSWORD in jenkins/.env}
+    volumes:
+      - jenkins_home:/var/jenkins_home                   # jobs, credentials, build history
+      - maven_repo:/var/jenkins_home/.m2                 # Maven cache, so builds after the first are fast
+      - ./casc:/var/jenkins_home/casc:ro                 # Configuration-as-Code file
+      - /var/run/docker.sock:/var/run/docker.sock        # lets the Docker CLI inside Jenkins drive the host daemon
+    # --- Docker socket permissions -------------------------------------------
+    # macOS / Windows (Docker Desktop): the socket is world-writable; nothing extra needed.
+    # Linux: the socket is owned by root:docker.  Either add the host's docker GID here
+    #        (find it with `stat -c %g /var/run/docker.sock`), e.g.
+    #   group_add:
+    #     - "999"
+    # or, for a quick local demo only, run the container as root:
+    #   user: root
+    # -----------------------------------------------------------------------------
+
+volumes:
+  jenkins_home:
+  maven_repo:

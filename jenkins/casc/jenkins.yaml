@@ -1,0 +1,26 @@
+# Jenkins Configuration as Code (JCasC).
+# Applied automatically at start-up because CASC_JENKINS_CONFIG points here.
+# Docs: https://github.com/jenkinsci/configuration-as-code-plugin
+jenkins:
+  systemMessage: "portfolio-valuation demo Jenkins — configured by jenkins/casc/jenkins.yaml"
+  numExecutors: 2            # two builds in parallel is plenty for a demo laptop
+
+  # Single admin user; credentials come from the environment (jenkins/.env).
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://localhost:9090/"          # used in links and the GitHub status-check URLs
+    adminAddress: "jenkins@example.com"
+
+# Jenkins credentials (aws-sandbox, aws-account-id, github-token, anthropic-api-key)
+# are deliberately NOT defined here so secrets never end up in a file in git.
+# Add them through the UI as described in jenkins/README.md.

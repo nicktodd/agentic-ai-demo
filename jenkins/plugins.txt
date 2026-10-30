@@ -1,0 +1,30 @@
+# One plugin id per line.  Installed at image build time by jenkins-plugin-cli,
+# which also pulls in each plugin's dependencies at compatible versions.
+
+# Pipeline (Jenkinsfile) support
+workflow-aggregator
+pipeline-stage-view
+pipeline-utility-steps
+pipeline-github-lib
+
+# Source control + GitHub integration (multibranch, PR discovery, status checks)
+git
+github
+github-branch-source
+
+# Credentials
+credentials-binding
+aws-credentials
+
+# Build tooling used by the Jenkinsfile
+docker-workflow
+jacoco
+junit
+timestamper
+ws-cleanup
+
+# Configuration as Code – reads jenkins/casc/jenkins.yaml at start-up
+configuration-as-code
+
+# OPTIONAL: nicer pipeline visualisation UI (large download; remove if you want a leaner image)
+blueocean
