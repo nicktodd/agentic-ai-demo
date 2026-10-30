@@ -1,0 +1,38 @@
+# Environment setup for the GitHub Copilot coding agent.
+#
+# When the coding agent is assigned an issue it runs in a GitHub Actions
+# runner. This workflow is executed first so that JDK 21 and the Maven
+# dependency cache are ready, letting the agent run `mvn -B verify` while
+# it works on the change. The job MUST be called `copilot-setup-steps`.
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Warm the Maven cache
+        run: mvn -B -q -ntp dependency:go-offline
+
+      - name: Prove the build works
+        run: mvn -B -ntp -DskipTests compile
