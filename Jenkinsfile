@@ -61,10 +61,10 @@ pipeline {
         always {
           // Publish test results (shows the "Test Result" trend on the job page).
           junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
-          // Publish JaCoCo coverage (JaCoCo plugin step).
-          jacoco execPattern: 'target/jacoco.exec',
-                 classPattern: 'target/classes',
-                 sourcePattern: 'src/main/java'
+          // Publish coverage via the Coverage plugin (the old "JaCoCo" plugin is deprecated).
+          // The 85% gate itself is enforced by Maven; this just gives Jenkins the trend chart.
+          recordCoverage tools: [[parser: 'JACOCO', pattern: 'target/site/jacoco/jacoco.xml']],
+                         sourceCodeRetention: 'LAST_BUILD'
           // Keep the jar as a build artifact for download/inspection.
           archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
