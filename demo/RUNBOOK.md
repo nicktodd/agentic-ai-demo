@@ -45,7 +45,7 @@ one safe. **The guardrails are the story, not the model.**
 | 0:10–0:18 | Stage 1: General AI (Copilot Chat ask mode) fixes the FX bug | Live |
 | 0:18–0:28 | Stage 2: Agent (Copilot agent mode) closes the coverage gap | Live |
 | 0:28–0:40 | Stage 3: Agentic AI (coding agent → PR → Jenkins → review → AWS) | Live, async |
-| 0:40–0:52 | Breakouts: pairs take a good-first-issue with agent mode | Hands-on |
+| 0:40–0:52 | Breakouts: pairs take a breakout issue with agent mode | Hands-on |
 | 0:52–0:58 | Debrief, governance talking points, PR merge + deploy lands | Talk |
 | 0:58–1:00 | Close: what to try this week | Talk |
 
