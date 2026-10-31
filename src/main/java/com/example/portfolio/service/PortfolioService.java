@@ -53,6 +53,17 @@ public class PortfolioService {
     return holdingRepository.save(new Holding(portfolioId, ticker.toUpperCase(), quantity));
   }
 
+  /** Removes a holding; one in another portfolio is reported as not found. */
+  public void removeHolding(Long portfolioId, Long holdingId) {
+    findById(portfolioId);
+    Holding holding =
+        holdingRepository
+            .findById(holdingId)
+            .filter(h -> portfolioId.equals(h.getPortfolioId()))
+            .orElseThrow(() -> new NotFoundException("No holding with id " + holdingId));
+    holdingRepository.delete(holding);
+  }
+
   /** Values every holding in the portfolio's base currency and sums them. */
   public PortfolioValuation value(Long portfolioId) {
     Portfolio portfolio = findById(portfolioId);

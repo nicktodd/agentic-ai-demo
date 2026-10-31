@@ -1,7 +1,9 @@
 package com.example.portfolio.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,5 +57,17 @@ class PortfolioControllerTest {
         .perform(get("/api/portfolios/1/holdings"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].ticker").value("HSBA"));
+  }
+
+  @Test
+  void removeHoldingReturns204() throws Exception {
+    mockMvc.perform(delete("/api/portfolios/1/holdings/5")).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void removeUnknownHoldingIs404() throws Exception {
+    doThrow(new NotFoundException("No holding 5")).when(portfolioService).removeHolding(1L, 5L);
+
+    mockMvc.perform(delete("/api/portfolios/1/holdings/5")).andExpect(status().isNotFound());
   }
 }

@@ -2,6 +2,8 @@ package com.example.portfolio.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.portfolio.model.Holding;
@@ -66,5 +68,48 @@ class PortfolioServiceTest {
     when(portfolioRepository.findById(42L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> portfolioService.value(42L)).isInstanceOf(NotFoundException.class);
+  }
+
+  @Test
+  void removesHolding() {
+    Holding holding = new Holding(1L, "HSBA", new BigDecimal("100"));
+    when(portfolioRepository.findById(1L))
+        .thenReturn(Optional.of(new Portfolio(1L, "UK Growth", "GBP")));
+    when(holdingRepository.findById(5L)).thenReturn(Optional.of(holding));
+
+    portfolioService.removeHolding(1L, 5L);
+
+    verify(holdingRepository).delete(holding);
+  }
+
+  @Test
+  void removeUnknownHoldingThrows() {
+    when(portfolioRepository.findById(1L))
+        .thenReturn(Optional.of(new Portfolio(1L, "UK Growth", "GBP")));
+    when(holdingRepository.findById(5L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> portfolioService.removeHolding(1L, 5L))
+        .isInstanceOf(NotFoundException.class);
+    verify(holdingRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void removeHoldingFromOtherPortfolioThrows() {
+    when(portfolioRepository.findById(1L))
+        .thenReturn(Optional.of(new Portfolio(1L, "UK Growth", "GBP")));
+    when(holdingRepository.findById(5L))
+        .thenReturn(Optional.of(new Holding(2L, "AAPL", new BigDecimal("10"))));
+
+    assertThatThrownBy(() -> portfolioService.removeHolding(1L, 5L))
+        .isInstanceOf(NotFoundException.class);
+    verify(holdingRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void removeHoldingFromUnknownPortfolioThrows() {
+    when(portfolioRepository.findById(42L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> portfolioService.removeHolding(42L, 5L))
+        .isInstanceOf(NotFoundException.class);
   }
 }
