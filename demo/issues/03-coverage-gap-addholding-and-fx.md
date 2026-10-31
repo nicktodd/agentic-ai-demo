@@ -1,6 +1,6 @@
 ---
 title: "Tests: close the coverage gap around addHolding and cross-currency FX"
-labels: tests, demo, good first issue
+labels: tests, demo
 ---
 
 ## Summary

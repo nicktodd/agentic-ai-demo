@@ -21,7 +21,6 @@ ensure_label() { # name colour description
 ensure_label "bug"                 "d73a4a" "Something isn't working"
 ensure_label "enhancement"         "a2eeef" "New feature or request"
 ensure_label "tests"               "0e8a16" "Test coverage work"
-ensure_label "good first issue"    "7057ff" "Good for newcomers"
 ensure_label "demo"                "fbca04" "Used live in the presenter demo"
 ensure_label "breakout"            "c5def5" "Hands-on exercise for graduate pairs"
 ensure_label "stage-1-general-ai"  "bfd4f2" "Solved with Copilot Chat (ask mode)"

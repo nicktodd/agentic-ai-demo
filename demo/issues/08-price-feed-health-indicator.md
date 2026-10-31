@@ -1,6 +1,6 @@
 ---
 title: "Custom Actuator health indicator for the price feed"
-labels: enhancement, good first issue, breakout
+labels: enhancement, breakout
 ---
 
 ## Summary
