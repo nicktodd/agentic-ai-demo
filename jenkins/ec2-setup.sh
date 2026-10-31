@@ -32,10 +32,14 @@ log "Installing base packages (git, jq, python3, docker, Java 21)"
 dnf install -y git jq python3 python3-pip docker java-21-amazon-corretto-devel
 
 # --- 2. Jenkins ----------------------------------------------------------------
+# The repo file and signing key are always refreshed: Jenkins moved its RPM
+# repo from redhat-stable/ to rpm-stable/ and rotated the signing key, so a
+# stale repo file makes "dnf update jenkins" fail with "GPG check FAILED".
+log "Refreshing Jenkins yum repo and signing key"
+curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo -o /etc/yum.repos.d/jenkins.repo
+rpm --import https://pkg.jenkins.io/rpm-stable/repodata/repomd.xml.key
 if ! rpm -q jenkins >/dev/null 2>&1; then
   log "Installing Jenkins LTS"
-  curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo -o /etc/yum.repos.d/jenkins.repo
-  rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
   dnf install -y jenkins
 else
   log "Jenkins already installed: $(rpm -q jenkins)"
