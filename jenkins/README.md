@@ -1,9 +1,52 @@
-# Running Jenkins locally for the demo
+# Jenkins for the demo
 
-This folder gives you a throw-away Jenkins controller in Docker with everything the
-`Jenkinsfile` needs already installed (JDK 21, Maven, Docker CLI, AWS CLI v2, jq, Python).
+The `Jenkinsfile` expects a Jenkins with JDK 21, Maven, the Docker CLI, AWS CLI v2, jq and
+Python 3 available on the agent. There are two ways to get one:
 
-## 1. Start Jenkins
+* **Option A (recommended): Jenkins on an EC2 instance in the sandbox account** with an IAM
+  *instance profile role*. The AWS CLI picks the role up automatically, so Jenkins stores no
+  AWS keys at all, and GitHub can reach the instance directly for webhooks. See section 0.
+* **Option B: Jenkins locally in Docker** using the compose file in this folder. You would
+  then need AWS access keys in Jenkins (see *Local Jenkins and AWS keys* at the end) and a
+  webhook relay such as smee.io.
+
+## 0. Option A: Jenkins on EC2 with an instance role
+
+1. **IAM role.** Create a role for EC2 (trusted entity: `ec2.amazonaws.com`) named e.g.
+   `jenkins-demo-role`. Attach [`infra/jenkins-iam-policy.json`](../infra/jenkins-iam-policy.json)
+   as an inline policy, with `ACCOUNT_ID` replaced. Attach the role to the instance
+   (*EC2 -> Instance -> Actions -> Security -> Modify IAM role*). No access keys are created.
+2. **Tools on the instance** (Amazon Linux 2023 shown):
+
+   ```bash
+   sudo dnf install -y java-21-amazon-corretto-devel maven docker jq python3 python3-pip git
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker jenkins       # the Docker Build stage runs `docker build` as the jenkins user
+   curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip && unzip -q awscliv2.zip && sudo ./aws/install
+   sudo systemctl restart jenkins
+   ```
+
+   Check the role is visible to the Jenkins user:
+
+   ```bash
+   sudo -u jenkins aws sts get-caller-identity
+   ```
+
+   It should print the sandbox account id and an `assumed-role/jenkins-demo-role/...` ARN.
+3. **Metadata hop limit.** If Jenkins (or its agents) ever run inside Docker *on* the instance,
+   raise the IMDSv2 hop limit to 2 or the containers cannot reach the credential endpoint:
+   `aws ec2 modify-instance-metadata-options --instance-id <id> --http-put-response-hop-limit 2`.
+   Jenkins installed directly on the host does not need this.
+4. **Plugins.** Install the plugins listed in [`plugins.txt`](plugins.txt) via
+   *Manage Jenkins -> Plugins* (the `aws-credentials` plugin is not needed for Option A).
+5. **Security group.** Open the Jenkins port (8080 by default) to your IP, and to GitHub's
+   webhook IP ranges (`https://api.github.com/meta`, key `hooks`) if you want webhooks.
+6. Set *Manage Jenkins -> System -> Jenkins URL* to the instance's public URL so the GitHub
+   status-check links work.
+
+Then continue from section 2 (credentials) below.
+
+## 1. Option B: start Jenkins locally in Docker
 
 ```bash
 cd jenkins
@@ -22,11 +65,13 @@ Open <http://localhost:9090> and log in with the user/password from `.env`.
 | ID                  | Kind             | Value                                                              | Needed for |
 |---------------------|------------------|--------------------------------------------------------------------|------------|
 | `github-token`      | Secret text      | GitHub PAT (classic) with scopes `repo`, `admin:repo_hook`          | Multibranch scanning, PR status checks, triage comments |
-| `aws-sandbox`       | AWS Credentials  | Access key + secret key of the sandbox IAM user (see `infra/jenkins-iam-policy.json`) | Push to ECR, deploy to ECS |
-| `aws-account-id`    | Secret text      | 12-digit sandbox account id                                         | Building the ECR registry hostname |
 | `anthropic-api-key` | Secret text      | Anthropic API key (optional)                                        | `scripts/triage_agent.py` on failed PR builds |
 
 The IDs must match exactly; the `Jenkinsfile` refers to them by ID.
+
+**No AWS credentials are stored in Jenkins.** The `Push to ECR` and `Deploy to ECS` stages call
+the AWS CLI with no keys set, so it uses the EC2 instance role, and the account id is looked
+up with `aws sts get-caller-identity` at the start of the push stage.
 
 ## 3. Create the Multibranch Pipeline job
 
@@ -51,7 +96,13 @@ check automatically by the GitHub Branch Source plugin, so the PR page shows a g
 
 ## 4. Webhooks (optional, makes builds start within seconds)
 
-GitHub can't reach `localhost`, so relay the webhook through [smee.io](https://smee.io):
+**Jenkins on EC2 (Option A):** GitHub can call Jenkins directly. In the GitHub repo,
+*Settings -> Webhooks -> Add webhook*: Payload URL `http://<jenkins-host>:8080/github-webhook/`,
+content type `application/json`, events **Pushes** and **Pull requests**. The security group
+must allow GitHub's hook IP ranges on that port.
+
+**Local Jenkins (Option B):** GitHub can't reach `localhost`, so relay the webhook through
+[smee.io](https://smee.io):
 
 ```bash
 # 1. Visit https://smee.io and click "Start a new channel"; copy the URL.
@@ -104,3 +155,21 @@ and read the scan log on the job page.
 ```bash
 docker compose down -v   # removes jenkins_home and maven_repo volumes
 ```
+
+## Appendix: local Jenkins and AWS keys (Option B only)
+
+A Jenkins running on your laptop has no instance role. If you must deploy from there, create
+an IAM user with `infra/jenkins-iam-policy.json`, store its access key in Jenkins as an
+**AWS Credentials** entry with ID `aws-sandbox`, and wrap the `Push to ECR` and `Deploy to ECS`
+stage bodies in the `Jenkinsfile` with:
+
+```groovy
+withCredentials([aws(credentialsId: 'aws-sandbox',
+                     accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+  sh '''...'''
+}
+```
+
+The STS account lookup keeps working with keys. For the demo, prefer Option A: it is the
+"least privilege, nothing to leak" talking point from the runbook.

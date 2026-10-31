@@ -116,24 +116,24 @@ scripts/create_issues.sh <org>/agentic-ai-demo
    approving review. This is what makes "a human reviews the agent's PR" real.
 5. Confirm `.github/workflows/copilot-setup-steps.yml` ran green under Actions.
 6. Create a classic PAT (or fine-grained token) for Jenkins with `repo` and
-   `admin:repo_hook`; and one with `repo` scope for the triage script if you use it.
+   `admin:repo_hook`; the triage script can reuse it.
 
-### Jenkins (local, in Docker)
+### Jenkins (on EC2 in the sandbox account)
 
-See [jenkins/README.md](jenkins/README.md). In short:
+See [jenkins/README.md](jenkins/README.md). In short: an EC2 instance with Jenkins, JDK 21,
+Maven, Docker and the AWS CLI, and an **IAM instance profile role** carrying
+`infra/jenkins-iam-policy.json`. The pipeline needs no AWS keys; the CLI uses the role and
+looks the account id up with STS. In Jenkins add the `github-token` credential (and
+optionally `anthropic-api-key`), create a **Multibranch Pipeline** pointing at the GitHub
+repo, and add a GitHub webhook pointing at `http://<jenkins-host>:8080/github-webhook/`.
 
-```bash
-cp jenkins/.env.example jenkins/.env && docker compose -f jenkins/docker-compose.yml up -d --build
-```
-
-Then at http://localhost:9090 add credentials `github-token`, `aws-sandbox`,
-`aws-account-id` (and optionally `anthropic-api-key`), create a **Multibranch Pipeline**
-pointing at the GitHub repo, and expose the webhook with smee.io.
+A local Docker alternative (`jenkins/docker-compose.yml`) is documented in the same file; it
+needs access keys and a smee.io webhook relay.
 
 ### AWS sandbox
 
-See [infra/README.md](infra/README.md). In short: an IAM user for Jenkins with the policy in
-`infra/jenkins-iam-policy.json`, then from your laptop:
+See [infra/README.md](infra/README.md). In short: the Jenkins instance role described above,
+then from your laptop (with your own sandbox admin credentials):
 
 ```bash
 scripts/deploy_manual.sh

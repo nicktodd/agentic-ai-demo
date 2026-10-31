@@ -14,8 +14,10 @@ one safe. **The guardrails are the story, not the model.**
 - [ ] App runs: `mvn spring-boot:run`, then `curl localhost:8080/actuator/health` → `UP`.
 - [ ] GitHub repo pushed, issues created (`scripts/create_issues.sh`), branch protection on.
 - [ ] `copilot-setup-steps.yml` green in Actions.
-- [ ] Jenkins up at http://localhost:9090, Multibranch job scanned, `main` built green once.
-- [ ] smee client running: `npx smee-client --url https://smee.io/<id> --target http://localhost:9090/github-webhook/`.
+- [ ] Jenkins on the EC2 instance reachable, Multibranch job scanned, `main` built green once
+      (proves the instance role can push to ECR and deploy to ECS).
+- [ ] GitHub webhook to `http://<jenkins-host>:8080/github-webhook/` shows a green tick under
+      *Recent Deliveries*. (Local Jenkins instead? Run the smee client, see jenkins/README.md.)
 - [ ] AWS: `scripts/deploy_manual.sh` run once; open `http://<alb-dns>/actuator/health` → `UP`.
       Keep the ALB URL in a text file for pasting.
 - [ ] VS Code open on the repo, Copilot Chat panel visible, font size ≥ 16 for Zoom.
@@ -189,8 +191,8 @@ VS Code's terminal approval dialog doesn't appear, check the Chat panel's *Conti
    - Show `infra/terraform/alb.tf`: the health check is `/actuator/health`, the same
      endpoint we curl'd at the start.
 
-5. Show the local Jenkins job (http://localhost:9090) with the `main` build green and the
-   PR branch list. When the agent's PR appears as `PR-<n>`, open its build.
+5. Show the Jenkins job with the `main` build green and the PR branch list. Point out
+   there is no AWS credential in Jenkins at all: the instance role is the identity. When the agent's PR appears as `PR-<n>`, open its build.
 
 6. **Go to breakouts (0:40).** Come back at 0:52.
 
@@ -240,8 +242,9 @@ Governance points, pick 4–5:
 - **Identity and audit.** The coding agent commits as `Copilot`, in a PR, from a sandbox.
   Every action is in the PR timeline and the session log. Compare with a developer pasting
   Chat output: no trail of *what the AI suggested vs what the human changed*.
-- **Least privilege.** The agent has no AWS credentials. Jenkins does, from its credential
-  store, only on `main`, only after review. The agent can't deploy; the pipeline can.
+- **Least privilege.** The agent has no AWS credentials. Jenkins has no stored keys either:
+  its EC2 instance role is scoped to ECR push and ECS deploy, used only on `main`, only after
+  review. The agent can't deploy; the pipeline can. Nothing exists to leak or rotate.
 - **Gates must be non-negotiable.** Coverage gate, Spotless, required status check, one
   approving review. The conventions file *tells* the agent not to lower the gate; branch
   protection *stops* it. Tell vs stop.
@@ -291,8 +294,8 @@ smallest useful loop.
 |---------|---------|
 | Copilot coding agent not available / not picking up the issue | Show the pre-recorded screenshots of a previous run; open an existing merged PR in the repo's history. Or do Stage 3 with agent mode in VS Code and push the PR yourself, narrating what the coding agent would have done differently (sandbox, no keyboard). |
 | Agent PR takes > 15 min | Carry on with breakouts; it's async by design and that's a talking point. Return at 0:52. |
-| Jenkins not receiving webhooks (smee down) | Click **Scan Multibranch Pipeline Now**. Or set the job to scan every minute. |
-| Jenkins can't reach Docker / AWS | Skip image/deploy stages: comment out `when { branch 'main' }` stages or show the `main` build history. Open the ALB URL from the pre-flight deploy. |
+| Jenkins not receiving webhooks (security group, smee down) | Click **Scan Multibranch Pipeline Now**. Or set the job to scan every minute. |
+| Jenkins can't reach AWS (`sts get-caller-identity` fails: role not attached or IMDS hop limit) or Docker | Skip image/deploy stages: comment out `when { branch 'main' }` stages or show the `main` build history. Open the ALB URL from the pre-flight deploy. |
 | ECS deploy slow (`services-stable` waits ~3–5 min) | Expected. Show the ECS console *Deployments* tab while talking. |
 | Local app port 8080 busy | `mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` |
 | Spotless fails on AI-generated code | Normal. `mvn spotless:apply`. Point out it's why lint is in `verify`. |

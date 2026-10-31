@@ -7,11 +7,14 @@
 //     so a PR proves that tests pass AND the Docker image builds;
 //   * only the "main" branch pushes an image and deploys it to the AWS sandbox.
 //
-// All secrets come from Jenkins credentials (Manage Jenkins -> Credentials). Nothing is hard-coded.
-//   aws-sandbox        : "AWS Credentials" kind (access key + secret key for the sandbox IAM user)
-//   aws-account-id     : Secret text, the 12-digit AWS account id
-//   anthropic-api-key  : Secret text (optional, only for the AI triage hook in the post block)
-//   github-token       : Secret text (optional, used by the triage script to comment on PRs)
+// AWS access: Jenkins runs on an EC2 instance with an IAM *instance profile role*
+// (policy in infra/jenkins-iam-policy.json). The AWS CLI picks the role up from the
+// instance metadata service automatically, so no access keys are stored in Jenkins
+// and nothing is hard-coded here. The account id is looked up with STS at run time.
+//
+// Remaining Jenkins credentials (Manage Jenkins -> Credentials), both optional:
+//   anthropic-api-key  : Secret text (only for the AI triage hook in the post block)
+//   github-token       : Secret text (used by the triage script to comment on PRs)
 
 pipeline {
   // The local Jenkins image (see jenkins/Dockerfile) already has JDK 21, Maven,
@@ -30,12 +33,9 @@ pipeline {
     ECR_REPO    = 'portfolio-valuation'             // created by infra/terraform/ecr.tf
     ECS_CLUSTER = 'portfolio-valuation-cluster'     // created by infra/terraform/ecs.tf
     ECS_SERVICE = 'portfolio-valuation-service'     // created by infra/terraform/ecs.tf
-    // IMAGE_TAG (short git SHA, e.g. "a1b2c3d") is set in the Checkout stage below.
-    // Declarative 'environment' values cannot be overridden from script, so it
-    // deliberately is not declared here.
-    // 12-digit account id, read from a Jenkins "Secret text" credential so it is
-    // never committed to git.  Used to build the ECR registry hostname.
-    AWS_ACCOUNT_ID = credentials('aws-account-id')
+    // IMAGE_TAG (short git SHA, e.g. "a1b2c3d") and AWS_ACCOUNT_ID are set from
+    // script in the stages below. Declarative 'environment' values cannot be
+    // overridden from script, so they deliberately are not declared here.
   }
 
   stages {
@@ -87,12 +87,15 @@ pipeline {
     stage('Push to ECR') {
       when { branch 'main' }
       steps {
-        // The AWS Credentials plugin injects AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
-        // for the duration of this block only; they are masked in the console log.
-        withCredentials([aws(credentialsId: 'aws-sandbox',
-                             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''#!/usr/bin/env bash
+        script {
+          // No keys needed: the CLI uses the EC2 instance role. This call also
+          // proves the role is attached before we try to push anything.
+          env.AWS_ACCOUNT_ID = sh(
+              script: "aws sts get-caller-identity --query Account --output text --region ${AWS_REGION}",
+              returnStdout: true).trim()
+          echo "Deploying with the instance role in account ${env.AWS_ACCOUNT_ID}"
+        }
+        sh '''#!/usr/bin/env bash
             set -euo pipefail
             ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
             ECR_IMAGE="${ECR_REGISTRY}/${ECR_REPO}"
@@ -107,18 +110,14 @@ pipeline {
             docker push "${ECR_IMAGE}:${IMAGE_TAG}"
             docker push "${ECR_IMAGE}:latest"
             echo "Pushed ${ECR_IMAGE}:${IMAGE_TAG}"
-          '''
-        }
+        '''
       }
     }
 
     stage('Deploy to ECS') {
       when { branch 'main' }
       steps {
-        withCredentials([aws(credentialsId: 'aws-sandbox',
-                             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''#!/usr/bin/env bash
+        sh '''#!/usr/bin/env bash
             set -euo pipefail
             ECR_IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
 
@@ -162,8 +161,7 @@ pipeline {
             echo "=================================================================="
             echo "  Deployed ${IMAGE_TAG} -> http://${ALB_DNS}/actuator/health"
             echo "=================================================================="
-          '''
-        }
+        '''
       }
     }
   }

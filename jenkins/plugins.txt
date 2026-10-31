@@ -14,7 +14,7 @@ github-branch-source
 
 # Credentials
 credentials-binding
-aws-credentials
+aws-credentials   # only needed for Option B (local Jenkins with access keys); harmless to install
 
 # Build tooling used by the Jenkinsfile
 docker-workflow

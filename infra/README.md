@@ -92,12 +92,13 @@ Cheap, but not free: **run `scripts/teardown.sh` after the session.**
 
 ## IAM for Jenkins
 
-Create an IAM user (e.g. `jenkins-demo`) in the sandbox account, attach the policy in
-[`jenkins-iam-policy.json`](jenkins-iam-policy.json) (replace `ACCOUNT_ID`), create an access key
-and store it in Jenkins as the `aws-sandbox` credential. The policy grants only what the
-pipeline uses:
+Jenkins runs on an EC2 instance in the sandbox account and uses an **instance profile role**,
+so no access keys exist anywhere. Create an IAM role for EC2 (e.g. `jenkins-demo-role`), attach
+the policy in [`jenkins-iam-policy.json`](jenkins-iam-policy.json) as an inline policy (replace
+`ACCOUNT_ID`), and attach the role to the instance. Verify from the instance with
+`sudo -u jenkins aws sts get-caller-identity`. The policy grants only what the pipeline uses:
 
-* `sts:GetCallerIdentity` — sanity check
+* `sts:GetCallerIdentity` — the pipeline uses it to find the account id for the ECR hostname
 * `ecr:GetAuthorizationToken` + push/pull on the one repository
 * `ecs:Describe*`, `ecs:RegisterTaskDefinition`, `ecs:UpdateService`
 * `iam:PassRole` on the task execution role only (needed to register a task definition that uses it)

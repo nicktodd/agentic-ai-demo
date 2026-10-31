@@ -21,6 +21,7 @@ unclassified:
     url: "http://localhost:9090/"          # used in links and the GitHub status-check URLs
     adminAddress: "jenkins@example.com"
 
-# Jenkins credentials (aws-sandbox, aws-account-id, github-token, anthropic-api-key)
-# are deliberately NOT defined here so secrets never end up in a file in git.
+# Jenkins credentials (github-token, anthropic-api-key) are deliberately NOT defined
+# here so secrets never end up in a file in git. AWS access comes from the EC2
+# instance role when Jenkins runs on EC2, so no AWS credential is needed at all.
 # Add them through the UI as described in jenkins/README.md.

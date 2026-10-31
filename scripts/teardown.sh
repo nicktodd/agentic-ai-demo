@@ -34,8 +34,8 @@ aws logs delete-log-group --region "${AWS_REGION}" --log-group-name "/ecs/${APP_
 cat <<MSG
 
 Done.  Remaining manual steps:
-  * Remove the Jenkins credentials (aws-sandbox, aws-account-id, anthropic-api-key, github-token)
-    if the Jenkins instance is staying around.
-  * Deactivate/delete the jenkins-demo IAM user's access key in the sandbox account.
+  * If the Jenkins EC2 instance is staying around: remove the Jenkins credentials
+    (anthropic-api-key, github-token) and detach the jenkins-demo-role instance role.
+  * Otherwise terminate the Jenkins instance and delete the role.
   * Optionally: cd jenkins && docker compose down -v
 MSG
