@@ -23,6 +23,15 @@ class PortfolioValuationApplicationTests {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).containsEntry("status", "UP");
+
+    Map<String, Object> body = response.getBody();
+    assertThat(body).containsKey("components");
+    Map<String, Object> components = (Map<String, Object>) body.get("components");
+    assertThat(components).containsKey("priceFeed");
+    Map<String, Object> priceFeed = (Map<String, Object>) components.get("priceFeed");
+    assertThat(priceFeed).containsEntry("status", "UP");
+    Map<String, Object> details = (Map<String, Object>) priceFeed.get("details");
+    assertThat(details).containsEntry("prices", 7);
   }
 
   @Test
