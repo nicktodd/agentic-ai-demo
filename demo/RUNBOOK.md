@@ -14,6 +14,10 @@ one safe. **The guardrails are the story, not the model.**
 - [ ] App runs: `mvn spring-boot:run`, then `curl localhost:8080/actuator/health` → `UP`.
 - [ ] GitHub repo pushed, issues created (`scripts/create_issues.sh`), branch protection on.
 - [ ] `copilot-setup-steps.yml` green in Actions.
+- [ ] Copilot Pro (or higher) is active on your account for this month: the coding agent in
+      Stage 3 is not on Copilot Free. Then check *Profile → Copilot settings → Coding agent*:
+      repository access includes this repo (default "all repositories"), and the repo's
+      *Settings → Actions* allows workflows. Both can silently revert after a lapsed plan.
 - [ ] Jenkins on the EC2 instance reachable, Multibranch job scanned, `main` built green once
       (proves the instance role can push to ECR and deploy to ECS).
 - [ ] GitHub webhook to `http://<jenkins-host>:8080/github-webhook/` shows a green tick under
@@ -67,8 +71,8 @@ Draw or show the ladder:
 3. **Agentic AI** – it is *assigned* work, operates in its own environment, opens a PR, and
    your pipeline and reviewers decide. Autonomy: bounded by the system, not by you watching.
 
-Point out: Fidelity-style controls (four-eyes review, CI gates, protected branches, audit
-trail) already exist. Agentic AI makes those controls *load-bearing*.
+Point out: the controls a regulated engineering team already has (four-eyes review, CI
+gates, protected branches, audit trail) don't change. Agentic AI makes them *load-bearing*.
 
 ---
 

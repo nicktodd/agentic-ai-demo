@@ -165,3 +165,7 @@ python3 scripts/triage_agent.py --log-file scripts/sample-failed-build.log --rep
 ```
 
 Needs `ANTHROPIC_API_KEY`; see [scripts/README.md](scripts/README.md).
+
+## Licence
+
+MIT. See [LICENSE](LICENSE). Reuse it for your own sessions; a mention is appreciated.
