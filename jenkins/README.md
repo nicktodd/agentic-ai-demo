@@ -16,23 +16,18 @@ Python 3 available on the agent. There are two ways to get one:
    `jenkins-demo-role`. Attach [`infra/jenkins-iam-policy.json`](../infra/jenkins-iam-policy.json)
    as an inline policy, with `ACCOUNT_ID` replaced. Attach the role to the instance
    (*EC2 -> Instance -> Actions -> Security -> Modify IAM role*). No access keys are created.
-2. **Tools on the instance** (Amazon Linux 2023 shown):
+2. **Tools on the instance.** On Amazon Linux 2023 run the setup script, which installs
+   Jenkins LTS, Java 21 (and makes it the default), Maven 3.9, Docker, git, jq and Python,
+   pins `JAVA_HOME` for the Jenkins service, and verifies everything as the `jenkins` user:
 
    ```bash
-   sudo dnf install -y java-21-amazon-corretto-devel maven docker jq python3 python3-pip git
-   sudo systemctl enable --now docker
-   sudo usermod -aG docker jenkins       # the Docker Build stage runs `docker build` as the jenkins user
-   curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip && unzip -q awscliv2.zip && sudo ./aws/install
-   sudo systemctl restart jenkins
+   curl -fsSLO https://raw.githubusercontent.com/<owner>/agentic-ai-demo/main/jenkins/ec2-setup.sh
+   sudo bash ec2-setup.sh
    ```
 
-   Check the role is visible to the Jenkins user:
-
-   ```bash
-   sudo -u jenkins aws sts get-caller-identity
-   ```
-
-   It should print the sandbox account id and an `assumed-role/jenkins-demo-role/...` ARN.
+   It is idempotent, so re-run it after any change. The last lines show the role ARN and a
+   Docker check; both must say OK. (See [`ec2-setup.sh`](ec2-setup.sh) for the individual
+   commands if you'd rather do it by hand or are on another distro.)
 3. **Metadata hop limit.** If Jenkins (or its agents) ever run inside Docker *on* the instance,
    raise the IMDSv2 hop limit to 2 or the containers cannot reach the credential endpoint:
    `aws ec2 modify-instance-metadata-options --instance-id <id> --http-put-response-hop-limit 2`.

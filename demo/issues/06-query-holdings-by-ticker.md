@@ -1,6 +1,6 @@
 ---
 title: "New query endpoint: which portfolios hold a given ticker?"
-labels: enhancement, good first issue, breakout
+labels: enhancement, breakout
 ---
 
 ## Summary

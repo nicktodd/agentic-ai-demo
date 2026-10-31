@@ -1,6 +1,6 @@
 ---
 title: "Validate the add-holding request body with @Valid"
-labels: enhancement, good first issue, breakout
+labels: enhancement, breakout
 ---
 
 ## Summary

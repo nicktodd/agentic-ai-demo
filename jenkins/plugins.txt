@@ -18,7 +18,7 @@ aws-credentials   # only needed for Option B (local Jenkins with access keys); h
 
 # Build tooling used by the Jenkinsfile
 docker-workflow
-jacoco
+coverage          # Coverage plugin (replaces the deprecated "JaCoCo" plugin)
 junit
 timestamper
 ws-cleanup

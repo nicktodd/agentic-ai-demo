@@ -12,6 +12,12 @@ for graduate engineers. The same task is solved three ways:
 The presenter script is in [demo/RUNBOOK.md](demo/RUNBOOK.md). The seeded issues are in
 [demo/issues](demo/issues).
 
+> **Not accepting external pull requests.** This is a teaching repository. The open issues are
+> deliberately left unresolved so they can be used as live exercises during sessions, so PRs from
+> outside the repo are closed automatically (see
+> [.github/workflows/close-external-prs.yml](.github/workflows/close-external-prs.yml)). Fork it
+> freely and use it for your own sessions instead.
+
 ## The service in 5 minutes
 
 ```
@@ -95,6 +101,26 @@ Do not fix these before the session; they are the demo.
    indicator, delete endpoint. Issues 04–09.
 
 ## One-time setup (manual steps)
+
+### Keeping outsiders' PRs out
+
+A public repo whose issues are labelled as beginner-friendly attracts drive-by pull requests
+within hours, which would consume the demo exercises. Three layers stop that:
+
+1. **Interaction limit** (Settings → Moderation options → Interaction limits → *Collaborators
+   only*). Blocks new issues/PRs/comments from non-collaborators. GitHub caps it at six months,
+   so re-apply it before each run of the session:
+
+   ```bash
+   gh api -X PUT repos/<owner>/agentic-ai-demo/interaction-limits -f limit=collaborators_only -f expiry=six_months
+   ```
+
+2. **Auto-close workflow** (`.github/workflows/close-external-prs.yml`) comments and closes any
+   PR from someone without write access, as a backstop for when the limit lapses. Copilot's PRs
+   are left alone.
+3. **No `good first issue` label.** The seeded issues use `demo` / `breakout` only, so they
+   stay out of GitHub's "contribute" feeds.
+
 
 ### GitHub
 

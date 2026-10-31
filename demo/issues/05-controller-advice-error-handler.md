@@ -1,6 +1,6 @@
 ---
 title: "Add a @ControllerAdvice that maps errors to ProblemDetail"
-labels: enhancement, good first issue, breakout
+labels: enhancement, breakout
 ---
 
 ## Summary
