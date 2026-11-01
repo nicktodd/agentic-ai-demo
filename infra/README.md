@@ -30,20 +30,31 @@ until one appears. Two ways round it; we recommend the first:
 
 **Option A — push an image from your laptop, then apply (recommended)**
 
+First make sure the CLI is talking to the right account:
+
+```bash
+aws sts get-caller-identity --query Account --output text   # must print the sandbox account id
+```
+
+Then, from the repo root:
+
 ```bash
 cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars   # set owner
+cp terraform.tfvars.example terraform.tfvars   # edit: set owner to your email
 tofu init
-tofu apply -target=aws_ecr_repository.app  # create just the ECR repo
+tofu apply -target=aws_ecr_repository.app  # create just the ECR repo (type "yes" at the prompt)
 
-# Build + push once from your laptop (scripts/deploy_manual.sh does exactly this):
+# Build + push the first image, then create everything else (about 20 resources, ~2 min):
 cd ../..
-./scripts/deploy_manual.sh                      # builds, pushes <sha> + latest
+./scripts/deploy_manual.sh --apply              # type "yes" at the apply prompt
 
+# The ALB target takes another 2-3 minutes to turn healthy:
 cd infra/terraform
-tofu apply                                      # now create everything else
-tofu output health_url                          # open it: {"status":"UP"}
+curl -s "$(tofu output -raw health_url)"        # {"status":"UP"}
 ```
+
+Without `--apply`, `deploy_manual.sh` only builds and pushes; you then run `tofu apply` and
+`tofu output health_url` yourself from `infra/terraform`.
 
 Or by hand, if you want to see each command:
 
@@ -67,6 +78,21 @@ aws ecs update-service --cluster portfolio-valuation-cluster --service portfolio
 ```
 
 (`desired_count` is in `ignore_changes`, so OpenTofu won't scale it back to 0 later.)
+
+## Where the state lives (if you are used to CloudFormation / CDK)
+
+CloudFormation keeps the stack state inside AWS. OpenTofu keeps it in a file,
+`infra/terraform/terraform.tfstate`: JSON mapping every resource in the `.tf` files to the real
+AWS id. `tofu plan` diffs the files against that file (and against AWS), and `tofu destroy`
+deletes whatever is listed in it. Consequences:
+
+* The file is git-ignored, so it exists only on the laptop that ran `apply`. **Run `apply` and
+  `destroy` from the same machine and directory.** If you lose it OpenTofu forgets the stack
+  exists and you must delete the resources by hand in the console (or `tofu import` them).
+* It holds ARNs, names and the ALB DNS name, no secrets, so it is not sensitive, just precious.
+* A real project points the `backend` block in `versions.tf` at an S3 bucket with state locking so
+  a team can share it. For a sandbox that lives a few days at a time, local state is fine, and
+  the difference makes a good talking point with the audience.
 
 ## After the first apply
 
