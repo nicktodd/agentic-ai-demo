@@ -76,12 +76,12 @@ demo/RUNBOOK.md                           timed presenter script
 demo/issues/*.md                          seeded issues (bug, feature, coverage, breakouts)
 scripts/create_issues.sh                  creates the issues + labels with gh
 scripts/triage_agent.py                   stretch: Claude diagnoses a failed build → PR comment
-scripts/deploy_manual.sh                  build, push to ECR, apply Terraform from a laptop
+scripts/deploy_manual.sh                  build, push to ECR, apply OpenTofu from a laptop
 scripts/teardown.sh                       destroys the AWS sandbox resources
 Jenkinsfile                               declarative pipeline: verify → image → ECR → ECS
 jenkins/                                  run Jenkins locally in Docker (JDK 21, Maven, Docker, AWS CLI)
 Dockerfile                                multi-stage image for the service
-infra/terraform/                          ECR + ECS Fargate + ALB in a sandbox account
+infra/terraform/                          ECR + ECS Fargate + ALB (OpenTofu/Terraform HCL)
 ```
 
 ## Deliberately planted problems
@@ -165,7 +165,7 @@ then from your laptop (with your own sandbox admin credentials):
 scripts/deploy_manual.sh
 ```
 
-which builds the image, creates the ECR repo, pushes, and applies the Terraform for ECS
+which builds the image, creates the ECR repo, pushes, and applies the OpenTofu config for ECS
 Fargate + ALB. After the session:
 
 ```bash

@@ -1,6 +1,8 @@
 # Infrastructure (AWS sandbox)
 
-Terraform in `terraform/` creates everything the app needs to run on AWS:
+The [OpenTofu](https://opentofu.org) configuration in `terraform/` creates everything the app
+needs to run on AWS (the directory keeps the conventional name; the `.tf` files are plain HCL
+and work unchanged with HashiCorp Terraform >= 1.5 if that is what you have):
 
 ```
 Internet -> ALB (:80) -> ECS Fargate task (:8080, Spring Boot) <- image from ECR
@@ -13,14 +15,16 @@ Comments in each `.tf` file say what a production set-up would do differently.
 
 ## Prerequisites
 
-* [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
+* [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.6 (`brew install opentofu`), or
+  [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5. The scripts use `tofu`
+  if it is on the PATH, else `terraform`; override with `TF_BIN=...`.
 * [AWS CLI v2](https://docs.aws.amazon.com/cli/) configured for the **sandbox** account
   (`aws sts get-caller-identity` should show the sandbox account id)
 * Docker (to build and push the first image)
 
 ## First deploy (the chicken-and-egg problem)
 
-Terraform creates the ECR repository *and* an ECS service that wants to run an image from it.
+OpenTofu creates the ECR repository *and* an ECS service that wants to run an image from it.
 On the very first apply there is no image yet, so the service would sit there failing to start
 until one appears. Two ways round it; we recommend the first:
 
@@ -29,16 +33,16 @@ until one appears. Two ways round it; we recommend the first:
 ```bash
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars   # set owner
-terraform init
-terraform apply -target=aws_ecr_repository.app  # create just the ECR repo
+tofu init
+tofu apply -target=aws_ecr_repository.app  # create just the ECR repo
 
 # Build + push once from your laptop (scripts/deploy_manual.sh does exactly this):
 cd ../..
 ./scripts/deploy_manual.sh                      # builds, pushes <sha> + latest
 
 cd infra/terraform
-terraform apply                                 # now create everything else
-terraform output health_url                     # open it: {"status":"UP"}
+tofu apply                                      # now create everything else
+tofu output health_url                          # open it: {"status":"UP"}
 ```
 
 Or by hand, if you want to see each command:
@@ -57,23 +61,23 @@ docker push $ECR:latest
 **Option B — apply with `desired_count = 0`, let Jenkins do the first deploy**
 
 ```bash
-terraform apply -var desired_count=0
+tofu apply -var desired_count=0
 # ... Jenkins pushes and registers a task definition on the next main build ...
 aws ecs update-service --cluster portfolio-valuation-cluster --service portfolio-valuation-service --desired-count 1
 ```
 
-(`desired_count` is in `ignore_changes`, so Terraform won't scale it back to 0 later.)
+(`desired_count` is in `ignore_changes`, so OpenTofu won't scale it back to 0 later.)
 
 ## After the first apply
 
 Jenkins (`Jenkinsfile`, branch `main`) pushes a new image per commit, registers a new task
-definition revision and updates the service. Terraform ignores those two fields, so you can
-re-run `terraform apply` for infra changes without rolling the app back.
+definition revision and updates the service. OpenTofu ignores those two fields, so you can
+re-run `tofu apply` for infra changes without rolling the app back.
 
 Useful commands:
 
 ```bash
-terraform output                                # URLs, names, ARNs
+tofu output                                     # URLs, names, ARNs
 aws logs tail /ecs/portfolio-valuation --follow # app logs
 aws ecs describe-services --cluster portfolio-valuation-cluster --services portfolio-valuation-service \
   --query 'services[0].deployments'
@@ -104,11 +108,11 @@ the policy in [`jenkins-iam-policy.json`](jenkins-iam-policy.json) as an inline 
 * `iam:PassRole` on the task execution role only (needed to register a task definition that uses it)
 * `elasticloadbalancing:DescribeLoadBalancers` — to print the URL
 
-Running Terraform itself needs far broader rights (creating VPC security groups, IAM roles,
+Running OpenTofu itself needs far broader rights (creating VPC security groups, IAM roles,
 ALBs ...), so do that from your own admin-ish sandbox credentials on the laptop, not from Jenkins.
 
 ## Tear down
 
 ```bash
-./scripts/teardown.sh        # terraform destroy + log group clean-up
+./scripts/teardown.sh        # tofu destroy + log group clean-up
 ```
