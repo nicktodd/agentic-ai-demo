@@ -6,14 +6,12 @@ import com.example.portfolio.model.PortfolioValuation;
 import com.example.portfolio.service.PortfolioService;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -48,11 +46,10 @@ public class PortfolioController {
     return portfolioService.addHolding(id, request.ticker(), request.quantity());
   }
 
-  /** Portfolio value in the portfolio's base currency or the requested currency. */
+  /** Portfolio value in the portfolio's own base currency. */
   @GetMapping("/{id}/value")
-  public PortfolioValuation value(
-      @PathVariable Long id, @RequestParam(required = false) String currency) {
-    return portfolioService.value(id, currency == null ? null : currency.toUpperCase(Locale.ROOT));
+  public PortfolioValuation value(@PathVariable Long id) {
+    return portfolioService.value(id);
   }
 
   /** Request body for adding a holding. */
