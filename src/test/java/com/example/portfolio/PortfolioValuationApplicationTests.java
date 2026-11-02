@@ -3,6 +3,7 @@ package com.example.portfolio;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,24 @@ class PortfolioValuationApplicationTests {
     assertThat(response.getBody()).containsEntry("currency", "USD");
     assertThat(new BigDecimal(response.getBody().get("totalValue").toString()))
         .isEqualByComparingTo("444447.75");
+  }
+
+  @Test
+  void valuesUsTechPortfolioInRequestedEur() {
+    ResponseEntity<Map> response =
+        rest.getForEntity("/api/portfolios/2/value?currency=EUR", Map.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).containsEntry("currency", "EUR");
+    List<Map> holdings = (List<Map>) response.getBody().get("holdings");
+    assertThat(holdings).hasSize(3);
+    assertThat(holdings).extracting(holding -> holding.get("valueCurrency")).containsOnly("EUR");
+    BigDecimal totalFromHoldings =
+        holdings.stream()
+            .map(holding -> new BigDecimal(holding.get("value").toString()))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    assertThat(new BigDecimal(response.getBody().get("totalValue").toString()))
+        .isEqualByComparingTo(totalFromHoldings);
   }
 
   @Test

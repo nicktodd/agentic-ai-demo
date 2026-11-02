@@ -2,6 +2,7 @@ package com.example.portfolio.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.portfolio.model.Holding;
 import com.example.portfolio.model.NotFoundException;
 import com.example.portfolio.model.Portfolio;
+import com.example.portfolio.model.PortfolioValuation;
 import com.example.portfolio.service.PortfolioService;
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 /** Web-layer slice test: only the controller and MVC infrastructure are loaded. */
 @WebMvcTest(PortfolioController.class)
@@ -55,5 +59,42 @@ class PortfolioControllerTest {
         .perform(get("/api/portfolios/1/holdings"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].ticker").value("HSBA"));
+  }
+
+  @Test
+  void valuesPortfolioInBaseCurrencyByDefault() throws Exception {
+    when(portfolioService.value(1L))
+        .thenReturn(new PortfolioValuation(1L, "UK Growth", "GBP", BigDecimal.ZERO, List.of()));
+
+    mockMvc
+        .perform(get("/api/portfolios/1/value"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.currency").value("GBP"));
+
+    verify(portfolioService).value(1L, null);
+  }
+
+  @Test
+  void passesRequestedCurrencyInUpperCase() throws Exception {
+    when(portfolioService.value(2L, "GBP"))
+        .thenReturn(new PortfolioValuation(2L, "US Tech", "GBP", BigDecimal.ZERO, List.of()));
+
+    mockMvc
+        .perform(get("/api/portfolios/2/value").param("currency", "gbp"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.currency").value("GBP"));
+
+    verify(portfolioService).value(2L, "GBP");
+  }
+
+  @Test
+  void unsupportedCurrencyReturnsBadRequest() throws Exception {
+    when(portfolioService.value(2L, "CHF"))
+        .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency: CHF"));
+
+    mockMvc
+        .perform(get("/api/portfolios/2/value").param("currency", "CHF"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.detail").value("400 BAD_REQUEST \"Unsupported currency: CHF\""));
   }
 }
