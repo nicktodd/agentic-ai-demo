@@ -10,10 +10,7 @@ import com.example.portfolio.repository.HoldingRepository;
 import com.example.portfolio.repository.PortfolioRepository;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Business logic for portfolios: listing, holdings and valuation. */
 @Service
@@ -58,22 +55,8 @@ public class PortfolioService {
 
   /** Values every holding in the portfolio's base currency and sums them. */
   public PortfolioValuation value(Long portfolioId) {
-    return value(portfolioId, null);
-  }
-
-  /**
-   * Values every holding in the requested currency, defaulting to the portfolio's base currency.
-   */
-  public PortfolioValuation value(Long portfolioId, String requestedCurrency) {
     Portfolio portfolio = findById(portfolioId);
-    String currency =
-        requestedCurrency == null
-            ? portfolio.getBaseCurrency()
-            : requestedCurrency.toUpperCase(Locale.ROOT);
-    if (!FxService.SUPPORTED.contains(currency)) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Unsupported currency: " + requestedCurrency);
-    }
+    String currency = portfolio.getBaseCurrency();
 
     List<HoldingValuation> valued =
         holdingRepository.findByPortfolioId(portfolioId).stream()
