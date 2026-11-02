@@ -2,7 +2,9 @@ package com.example.portfolio;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.portfolio.service.FxService;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 class PortfolioValuationApplicationTests {
 
   @Autowired private TestRestTemplate rest;
+  @Autowired private FxService fxService;
 
   @Test
   void contextLoadsAndHealthIsUp() {
@@ -42,6 +45,34 @@ class PortfolioValuationApplicationTests {
     assertThat(response.getBody()).containsEntry("currency", "USD");
     assertThat(new BigDecimal(response.getBody().get("totalValue").toString()))
         .isEqualByComparingTo("444447.75");
+  }
+
+  @Test
+  void valuesUsTechPortfolioInRequestedEur() {
+    ResponseEntity<Map> response =
+        rest.getForEntity("/api/portfolios/2/value?currency=EUR", Map.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).containsEntry("currency", "EUR");
+    List<?> holdings = (List<?>) response.getBody().get("holdings");
+    assertThat(holdings).hasSize(3);
+    Map<String, BigDecimal> seededUsdValues =
+        Map.of(
+            "AAPL", new BigDecimal("189840"),
+            "MSFT", new BigDecimal("166104"),
+            "NVDA", new BigDecimal("88503.75"));
+    BigDecimal totalFromHoldings = BigDecimal.ZERO;
+    for (Object item : holdings) {
+      Map<?, ?> holding = (Map<?, ?>) item;
+      assertThat(holding.get("valueCurrency")).isEqualTo("EUR");
+      BigDecimal value = new BigDecimal(holding.get("value").toString());
+      assertThat(value)
+          .isEqualByComparingTo(
+              fxService.convert(seededUsdValues.get(holding.get("ticker")), "USD", "EUR"));
+      totalFromHoldings = totalFromHoldings.add(value);
+    }
+    assertThat(new BigDecimal(response.getBody().get("totalValue").toString()))
+        .isEqualByComparingTo(totalFromHoldings);
   }
 
   @Test
