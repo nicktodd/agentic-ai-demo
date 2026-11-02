@@ -18,10 +18,14 @@ one safe. **The guardrails are the story, not the model.**
       Stage 3 is not on Copilot Free. Then check *Profile → Copilot settings → Coding agent*:
       repository access includes this repo (default "all repositories"), and the repo's
       *Settings → Actions* allows workflows. Both can silently revert after a lapsed plan.
-- [ ] Jenkins on the EC2 instance reachable, Multibranch job scanned, `main` built green once
+- [ ] Jenkins EC2 instance started. If it gets a new public IP on start, update the Route 53
+      A record for the Jenkins hostname (low TTL, e.g. 60 s) and wait a minute. Check
+      *Manage Jenkins → System → Jenkins URL* still matches the hostname.
+- [ ] Jenkins reachable on that hostname, Multibranch job scanned, `main` built green once
       (proves the instance role can push to ECR and deploy to ECS).
 - [ ] GitHub webhook to `http://<jenkins-host>:8080/github-webhook/` shows a green tick under
-      *Recent Deliveries*. (Local Jenkins instead? Run the smee client, see jenkins/README.md.)
+      *Recent Deliveries*. Click **Redeliver** on the last ping after an IP change to prove it.
+      (Local Jenkins instead? Run the smee client, see jenkins/README.md.)
 - [ ] AWS: `scripts/deploy_manual.sh` run once; open `http://<alb-dns>/actuator/health` → `UP`.
       Keep the ALB URL in a text file for pasting.
 - [ ] VS Code open on the repo, Copilot Chat panel visible, font size ≥ 16 for Zoom.

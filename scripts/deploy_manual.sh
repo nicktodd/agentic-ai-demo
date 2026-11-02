@@ -3,16 +3,20 @@
 # Used for the very first image (see infra/README.md) or when Jenkins is down.
 #
 #   ./scripts/deploy_manual.sh            # build + push <git-sha> and latest
-#   ./scripts/deploy_manual.sh --apply    # ...then `terraform apply -var image_tag=<sha>`
+#   ./scripts/deploy_manual.sh --apply    # ...then `tofu apply -var image_tag=<sha>`
 #
 # Environment:
 #   AWS_REGION  (default eu-west-2)
+#   TF_BIN      (default: tofu if installed, else terraform)
 set -euo pipefail
 
 AWS_REGION="${AWS_REGION:-eu-west-2}"
 APP_NAME="${APP_NAME:-portfolio-valuation}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="${REPO_ROOT}/infra/terraform"
+# OpenTofu is the default; plain Terraform works too (same HCL, same state format).
+TF_BIN="${TF_BIN:-$(command -v tofu || command -v terraform || true)}"
+[[ -n "${TF_BIN}" ]] || { echo "Neither tofu nor terraform found on PATH" >&2; exit 1; }
 
 # Who are we and where are we pushing?
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
@@ -38,13 +42,13 @@ docker push "${ECR_IMAGE}:${IMAGE_TAG}"
 docker push "${ECR_IMAGE}:latest"
 
 if [[ "${1:-}" == "--apply" ]]; then
-  echo "==> terraform apply (image_tag=${IMAGE_TAG})"
+  echo "==> $(basename "${TF_BIN}") apply (image_tag=${IMAGE_TAG})"
   cd "${TF_DIR}"
-  terraform init -input=false >/dev/null
-  terraform apply -var "region=${AWS_REGION}" -var "image_tag=${IMAGE_TAG}"
-  terraform output health_url
+  "${TF_BIN}" init -input=false >/dev/null
+  "${TF_BIN}" apply -var "region=${AWS_REGION}" -var "image_tag=${IMAGE_TAG}"
+  "${TF_BIN}" output health_url
 else
   echo
   echo "Pushed. To (re)create the infrastructure with this image:"
-  echo "  cd infra/terraform && terraform apply -var image_tag=${IMAGE_TAG}"
+  echo "  cd infra/terraform && tofu apply -var image_tag=${IMAGE_TAG}"
 fi
