@@ -2,6 +2,7 @@ package com.example.portfolio;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.portfolio.service.FxService;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 class PortfolioValuationApplicationTests {
 
   @Autowired private TestRestTemplate rest;
+  @Autowired private FxService fxService;
 
   @Test
   void contextLoadsAndHealthIsUp() {
@@ -52,13 +54,23 @@ class PortfolioValuationApplicationTests {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).containsEntry("currency", "EUR");
-    List<Map> holdings = (List<Map>) response.getBody().get("holdings");
+    List<?> holdings = (List<?>) response.getBody().get("holdings");
     assertThat(holdings).hasSize(3);
-    assertThat(holdings).extracting(holding -> holding.get("valueCurrency")).containsOnly("EUR");
-    BigDecimal totalFromHoldings =
-        holdings.stream()
-            .map(holding -> new BigDecimal(holding.get("value").toString()))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    Map<String, BigDecimal> seededUsdValues =
+        Map.of(
+            "AAPL", new BigDecimal("189840"),
+            "MSFT", new BigDecimal("166104"),
+            "NVDA", new BigDecimal("88503.75"));
+    BigDecimal totalFromHoldings = BigDecimal.ZERO;
+    for (Object item : holdings) {
+      Map<?, ?> holding = (Map<?, ?>) item;
+      assertThat(holding.get("valueCurrency")).isEqualTo("EUR");
+      BigDecimal value = new BigDecimal(holding.get("value").toString());
+      assertThat(value)
+          .isEqualByComparingTo(
+              fxService.convert(seededUsdValues.get(holding.get("ticker")), "USD", "EUR"));
+      totalFromHoldings = totalFromHoldings.add(value);
+    }
     assertThat(new BigDecimal(response.getBody().get("totalValue").toString()))
         .isEqualByComparingTo(totalFromHoldings);
   }

@@ -72,13 +72,12 @@ class PortfolioServiceTest {
             List.of(
                 new Holding(2L, "AAPL", new BigDecimal("2")),
                 new Holding(2L, "MSFT", new BigDecimal("3"))));
-    when(pricingService.priceFor("AAPL")).thenReturn(new Price("AAPL", new BigDecimal("10"), "USD"));
+    when(pricingService.priceFor("AAPL"))
+        .thenReturn(new Price("AAPL", new BigDecimal("10"), "USD"));
     when(pricingService.priceFor("MSFT"))
         .thenReturn(new Price("MSFT", new BigDecimal("20"), "USD"));
-    when(fxService.convert(new BigDecimal("20"), "USD", "GBP"))
-        .thenReturn(new BigDecimal("15.00"));
-    when(fxService.convert(new BigDecimal("60"), "USD", "GBP"))
-        .thenReturn(new BigDecimal("45.00"));
+    when(fxService.convert(new BigDecimal("20"), "USD", "GBP")).thenReturn(new BigDecimal("15.00"));
+    when(fxService.convert(new BigDecimal("60"), "USD", "GBP")).thenReturn(new BigDecimal("45.00"));
 
     PortfolioValuation valuation = portfolioService.value(2L, "gbp");
 
