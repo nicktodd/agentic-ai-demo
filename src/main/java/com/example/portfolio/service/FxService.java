@@ -4,6 +4,7 @@ import com.example.portfolio.model.FxRate;
 import com.example.portfolio.model.NotFoundException;
 import com.example.portfolio.repository.FxRateRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
@@ -26,23 +27,18 @@ public class FxService {
   /** Converts {@code amount} from one currency to another, rounded to 2 decimal places. */
   public BigDecimal convert(BigDecimal amount, String from, String to) {
     if (from.equals(to)) {
-      return amount.setScale(2, java.math.RoundingMode.HALF_UP);
+      return amount.setScale(2, RoundingMode.HALF_UP);
     }
-    double inUsd = amount.doubleValue() * usdRate(from);
-    double converted = inUsd / usdRate(to);
-    // Round to cents.
-    double cents = Math.floor(converted * 100) / 100;
-    return BigDecimal.valueOf(cents).setScale(2, java.math.RoundingMode.HALF_UP);
+    return amount.multiply(usdRate(from)).divide(usdRate(to), 2, RoundingMode.HALF_UP);
   }
 
-  private double usdRate(String currency) {
+  private BigDecimal usdRate(String currency) {
     if (PIVOT.equals(currency)) {
-      return 1.0;
+      return BigDecimal.ONE;
     }
     return fxRateRepository
         .findById(currency)
         .map(FxRate::getRate)
-        .map(BigDecimal::doubleValue)
         .orElseThrow(() -> new NotFoundException("No FX rate for currency " + currency));
   }
 }

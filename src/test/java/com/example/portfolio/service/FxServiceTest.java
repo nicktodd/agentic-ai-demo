@@ -52,6 +52,24 @@ class FxServiceTest {
   }
 
   @Test
+  void roundsUsdToGbpHalfUp() {
+    when(fxRateRepository.findById("GBP"))
+        .thenReturn(Optional.of(new FxRate("GBP", new BigDecimal("1.2715"))));
+
+    assertThat(fxService.convert(new BigDecimal("100"), "USD", "GBP"))
+        .isEqualByComparingTo("78.65");
+  }
+
+  @Test
+  void roundsGbpToUsdHalfUp() {
+    when(fxRateRepository.findById("GBP"))
+        .thenReturn(Optional.of(new FxRate("GBP", new BigDecimal("1.2715"))));
+
+    assertThat(fxService.convert(new BigDecimal("250"), "GBP", "USD"))
+        .isEqualByComparingTo("317.88");
+  }
+
+  @Test
   void unknownCurrencyThrowsNotFound() {
     when(fxRateRepository.findById("CHF")).thenReturn(Optional.empty());
 
